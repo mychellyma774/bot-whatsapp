@@ -6,7 +6,6 @@ const {
 } = require("@whiskeysockets/baileys");
 
 const QRCode = require("qrcode");
-const sharp = require("sharp");
 
 function bufferFromStream(stream) {
   return new Promise(async (resolve) => {
@@ -29,12 +28,12 @@ async function start() {
 
   sock.ev.on("creds.update", saveCreds);
 
-  // 🔥 QR EM IMAGEM (SEM BUG)
+  // 🔥 QR EM LINK (SEM BUG)
   sock.ev.on("connection.update", async (update) => {
     const { connection, qr } = update;
 
     if (qr) {
-      console.log("📱 Escaneie o QR (cole no navegador):");
+      console.log("📱 Copie e cole no navegador:");
 
       const qrImage = await QRCode.toDataURL(qr);
       console.log(qrImage);
@@ -62,7 +61,7 @@ async function start() {
 
     console.log("Mensagem:", text);
 
-    // 🤖 comandos
+    // comandos
     if (text === "!oi") {
       await sock.sendMessage(msg.key.remoteJid, {
         text: "Salve 😎"
@@ -79,7 +78,7 @@ async function start() {
       });
     }
 
-    // 🖼️ FIGURINHA
+    // figurinha simples
     if (text === ".s") {
       try {
         const quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
@@ -98,13 +97,8 @@ async function start() {
         const stream = await downloadContentFromMessage(image, "image");
         const buffer = await bufferFromStream(stream);
 
-        const sticker = await sharp(buffer)
-          .resize(512, 512)
-          .webp()
-          .toBuffer();
-
         await sock.sendMessage(msg.key.remoteJid, {
-          sticker
+          sticker: buffer
         });
 
       } catch (err) {

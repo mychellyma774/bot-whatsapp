@@ -7,6 +7,8 @@ const {
 
 const QRCode = require("qrcode");
 
+const prefix = ".";
+
 function bufferFromStream(stream) {
   return new Promise(async (resolve) => {
     let buffer = Buffer.from([]);
@@ -28,13 +30,12 @@ async function start() {
 
   sock.ev.on("creds.update", saveCreds);
 
-  // 🔥 QR EM LINK (SEM BUG)
+  // QR em link
   sock.ev.on("connection.update", async (update) => {
     const { connection, qr } = update;
 
     if (qr) {
       console.log("📱 Copie e cole no navegador:");
-
       const qrImage = await QRCode.toDataURL(qr);
       console.log(qrImage);
     }
@@ -61,25 +62,27 @@ async function start() {
 
     console.log("Mensagem:", text);
 
-    // comandos
-    if (text === "!oi") {
+    // .oi
+    if (text === prefix + "oi") {
       await sock.sendMessage(msg.key.remoteJid, {
         text: "Salve 😎"
       });
     }
 
-    if (text === "!menu") {
+    // .menu
+    if (text === prefix + "menu") {
       await sock.sendMessage(msg.key.remoteJid, {
         text: `🤖 BOT ONLINE
 
-!oi
-!menu
-.s (figurinha)`
+.oi
+.menu
+.s (figurinha)
+.ban (remover membro)`
       });
     }
 
-    // figurinha simples
-    if (text === ".s") {
+    // .s (figurinha)
+    if (text === prefix + "s") {
       try {
         const quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
 
@@ -105,6 +108,58 @@ async function start() {
         console.log(err);
         await sock.sendMessage(msg.key.remoteJid, {
           text: "❌ Erro ao fazer figurinha"
+        });
+      }
+    }
+
+    // .ban (admin)
+    if (text === prefix + "ban") {
+      try {
+        const isGroup = msg.key.remoteJid.endsWith("@g.us");
+        if (!isGroup) {
+          await sock.sendMessage(msg.key.remoteJid, {
+            text: "❌ Só funciona em grupo"
+          });
+          return;
+        }
+
+        const sender = msg.key.participant || msg.key.remoteJid;
+
+        const groupMetadata = await sock.groupMetadata(msg.key.remoteJid);
+        const admins = groupMetadata.participants
+          .filter(p => p.admin !== null)
+          .map(p => p.id);
+
+        if (!admins.includes(sender)) {
+          await sock.sendMessage(msg.key.remoteJid, {
+            text: "❌ Você não é admin"
+          });
+          return;
+        }
+
+        const mentioned = msg.message.extendedTextMessage?.contextInfo?.participant;
+
+        if (!mentioned) {
+          await sock.sendMessage(msg.key.remoteJid, {
+            text: "❌ Responda a mensagem da pessoa"
+          });
+          return;
+        }
+
+        await sock.groupParticipantsUpdate(
+          msg.key.remoteJid,
+          [mentioned],
+          "remove"
+        );
+
+        await sock.sendMessage(msg.key.remoteJid, {
+          text: "🚫 Usuário removido!"
+        });
+
+      } catch (err) {
+        console.log(err);
+        await sock.sendMessage(msg.key.remoteJid, {
+          text: "❌ Erro ao banir"
         });
       }
     }

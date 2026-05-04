@@ -6,6 +6,7 @@ const {
 } = require("@whiskeysockets/baileys");
 
 const QRCode = require("qrcode");
+const { Sticker, StickerTypes } = require("wa-sticker-formatter");
 
 const prefix = ".";
 
@@ -30,7 +31,7 @@ async function start() {
 
   sock.ev.on("creds.update", saveCreds);
 
-  // QR em link
+  // QR EM LINK
   sock.ev.on("connection.update", async (update) => {
     const { connection, qr } = update;
 
@@ -81,7 +82,7 @@ async function start() {
       });
     }
 
-    // .s (figurinha)
+    // .s (figurinha funcionando 100%)
     if (text === prefix + "s") {
       try {
         const quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
@@ -100,8 +101,17 @@ async function start() {
         const stream = await downloadContentFromMessage(image, "image");
         const buffer = await bufferFromStream(stream);
 
+        const sticker = new Sticker(buffer, {
+          pack: "BOT KEYSON",
+          author: "Meu Bot",
+          type: StickerTypes.FULL,
+          quality: 70
+        });
+
+        const stickerBuffer = await sticker.toBuffer();
+
         await sock.sendMessage(msg.key.remoteJid, {
-          sticker: buffer
+          sticker: stickerBuffer
         });
 
       } catch (err) {
@@ -112,7 +122,7 @@ async function start() {
       }
     }
 
-    // .ban (admin)
+    // .ban
     if (text === prefix + "ban") {
       try {
         const isGroup = msg.key.remoteJid.endsWith("@g.us");

@@ -31,18 +31,17 @@ async function start() {
 
   sock.ev.on("creds.update", saveCreds);
 
-  // QR EM LINK
   sock.ev.on("connection.update", async (update) => {
     const { connection, qr } = update;
 
     if (qr) {
-      console.log("📱 Copie e cole no navegador:");
+      console.log("📱 GEADA BOT - escaneie:");
       const qrImage = await QRCode.toDataURL(qr);
       console.log(qrImage);
     }
 
     if (connection === "open") {
-      console.log("✅ BOT CONECTADO!");
+      console.log("❄️ GEADA BOT CONECTADO!");
     }
 
     if (connection === "close") {
@@ -55,34 +54,55 @@ async function start() {
     const msg = messages[0];
     if (!msg.message) return;
 
+    const from = msg.key.remoteJid;
+    const sender = msg.key.participant || from;
+
     const text =
       msg.message.conversation ||
       msg.message.extendedTextMessage?.text ||
       msg.message.imageMessage?.caption ||
       "";
 
-    console.log("Mensagem:", text);
+    const isGroup = from.endsWith("@g.us");
 
-    // .oi
-    if (text === prefix + "oi") {
-      await sock.sendMessage(msg.key.remoteJid, {
-        text: "Salve 😎"
-      });
+    let admins = [];
+    if (isGroup) {
+      const metadata = await sock.groupMetadata(from);
+      admins = metadata.participants
+        .filter(p => p.admin)
+        .map(p => p.id);
     }
 
-    // .menu
+    const isAdmin = admins.includes(sender);
+
+    // =================
+    // COMANDOS
+    // =================
+
+    if (text === prefix + "oi") {
+      await sock.sendMessage(from, { text: "Salve 😎 - GEADA BOT" });
+    }
+
     if (text === prefix + "menu") {
-      await sock.sendMessage(msg.key.remoteJid, {
-        text: `🤖 BOT ONLINE
+      await sock.sendMessage(from, {
+        text: `❄️ GEADA BOT
 
 .oi
 .menu
-.s (figurinha)
-.ban (remover membro)`
+.s
+
+ADMIN:
+.ban
+.add
+.abrir
+.fechar`
       });
     }
 
-    // .s (figurinha funcionando 100%)
+    // =================
+    // FIGURINHA
+    // =================
+
     if (text === prefix + "s") {
       try {
         const quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
@@ -92,7 +112,7 @@ async function start() {
           quoted?.imageMessage;
 
         if (!image) {
-          await sock.sendMessage(msg.key.remoteJid, {
+          await sock.sendMessage(from, {
             text: "❌ Envie ou responda uma imagem com .s"
           });
           return;
@@ -102,76 +122,94 @@ async function start() {
         const buffer = await bufferFromStream(stream);
 
         const sticker = new Sticker(buffer, {
-          pack: "BOT KEYSON",
-          author: "Meu Bot",
+          pack: "GEADA BOT ❄️",
+          author: "Keyson",
           type: StickerTypes.FULL,
           quality: 70
         });
 
         const stickerBuffer = await sticker.toBuffer();
 
-        await sock.sendMessage(msg.key.remoteJid, {
+        await sock.sendMessage(from, {
           sticker: stickerBuffer
         });
 
       } catch (err) {
         console.log(err);
-        await sock.sendMessage(msg.key.remoteJid, {
-          text: "❌ Erro ao fazer figurinha"
+      }
+    }
+
+    // =================
+    // BAN
+    // =================
+
+    if (text === prefix + "ban") {
+      if (!isGroup || !isAdmin) return;
+
+      const quoted = msg.message.extendedTextMessage?.contextInfo;
+      if (!quoted) return;
+
+      const user = quoted.participant;
+
+      await sock.groupParticipantsUpdate(from, [user], "remove");
+
+      await sock.sendMessage(from, {
+        text: "🚫 Removido pelo GEADA BOT"
+      });
+    }
+
+    // =================
+    // ADD
+    // =================
+
+    if (text.startsWith(prefix + "add")) {
+      if (!isGroup || !isAdmin) return;
+
+      const number = text.replace(prefix + "add", "").trim();
+      if (!number) return;
+
+      const user = number.replace(/\D/g, "") + "@s.whatsapp.net";
+
+      try {
+        await sock.groupParticipantsUpdate(from, [user], "add");
+
+        await sock.sendMessage(from, {
+          text: "✅ Adicionado pelo GEADA BOT"
+        });
+
+      } catch (err) {
+        await sock.sendMessage(from, {
+          text: "❌ Não foi possível adicionar"
         });
       }
     }
 
-    // .ban
-    if (text === prefix + "ban") {
-      try {
-        const isGroup = msg.key.remoteJid.endsWith("@g.us");
-        if (!isGroup) {
-          await sock.sendMessage(msg.key.remoteJid, {
-            text: "❌ Só funciona em grupo"
-          });
-          return;
-        }
+    // =================
+    // FECHAR
+    // =================
 
-        const sender = msg.key.participant || msg.key.remoteJid;
+    if (text === prefix + "fechar") {
+      if (!isGroup || !isAdmin) return;
 
-        const groupMetadata = await sock.groupMetadata(msg.key.remoteJid);
-        const admins = groupMetadata.participants
-          .filter(p => p.admin !== null)
-          .map(p => p.id);
+      await sock.groupSettingUpdate(from, "announcement");
 
-        if (!admins.includes(sender)) {
-          await sock.sendMessage(msg.key.remoteJid, {
-            text: "❌ Você não é admin"
-          });
-          return;
-        }
+      await sock.sendMessage(from, {
+        text: "🔒 Grupo fechado (GEADA BOT)"
+      });
+    }
 
-        const mentioned = msg.message.extendedTextMessage?.contextInfo?.participant;
+    // =================
+    // ABRIR
+    // =================
 
-        if (!mentioned) {
-          await sock.sendMessage(msg.key.remoteJid, {
-            text: "❌ Responda a mensagem da pessoa"
-          });
-          return;
-        }
+    if (text === prefix + "abrir") {
+      if (!isGroup || !isAdmin) return;
 
-        await sock.groupParticipantsUpdate(
-          msg.key.remoteJid,
-          [mentioned],
-          "remove"
-        );
+      await sock.groupSettingUpdate(from, "not_announcement");
 
-        await sock.sendMessage(msg.key.remoteJid, {
-          text: "🚫 Usuário removido!"
-        });
-
-      } catch (err) {
-        console.log(err);
-        await sock.sendMessage(msg.key.remoteJid, {
-          text: "❌ Erro ao banir"
-        });
-      }
+      await sock.sendMessage(from, {
+        text: "🔓 Grupo aberto (GEADA BOT)"
+      });
     }
   });
 }

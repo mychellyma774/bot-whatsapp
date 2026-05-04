@@ -5,11 +5,11 @@ const {
   downloadContentFromMessage
 } = require("@whiskeysockets/baileys");
 
-const qrcode = require("qrcode-terminal");
+const QRCode = require("qrcode");
 const sharp = require("sharp");
 
 function bufferFromStream(stream) {
-  return new Promise(async (resolve, reject) => {
+  return new Promise(async (resolve) => {
     let buffer = Buffer.from([]);
     for await (const chunk of stream) {
       buffer = Buffer.concat([buffer, chunk]);
@@ -29,12 +29,15 @@ async function start() {
 
   sock.ev.on("creds.update", saveCreds);
 
-  sock.ev.on("connection.update", (update) => {
+  // 🔥 QR EM IMAGEM (SEM BUG)
+  sock.ev.on("connection.update", async (update) => {
     const { connection, qr } = update;
 
     if (qr) {
-      console.log("📱 Escaneie o QR:");
-      qrcode.generate(qr, { small: true });
+      console.log("📱 Escaneie o QR (cole no navegador):");
+
+      const qrImage = await QRCode.toDataURL(qr);
+      console.log(qrImage);
     }
 
     if (connection === "open") {
@@ -51,7 +54,6 @@ async function start() {
     const msg = messages[0];
     if (!msg.message) return;
 
-    // 🔥 pega texto corretamente (CORREÇÃO DO UNDEFINED)
     const text =
       msg.message.conversation ||
       msg.message.extendedTextMessage?.text ||
@@ -60,7 +62,7 @@ async function start() {
 
     console.log("Mensagem:", text);
 
-    // comandos básicos
+    // 🤖 comandos
     if (text === "!oi") {
       await sock.sendMessage(msg.key.remoteJid, {
         text: "Salve 😎"
@@ -69,11 +71,15 @@ async function start() {
 
     if (text === "!menu") {
       await sock.sendMessage(msg.key.remoteJid, {
-        text: "🤖 BOT ONLINE\n\n!oi\n!menu\n.s (figurinha)"
+        text: `🤖 BOT ONLINE
+
+!oi
+!menu
+.s (figurinha)`
       });
     }
 
-    // 🖼️ FIGURINHA REAL (.s)
+    // 🖼️ FIGURINHA
     if (text === ".s") {
       try {
         const quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
@@ -84,7 +90,7 @@ async function start() {
 
         if (!image) {
           await sock.sendMessage(msg.key.remoteJid, {
-            text: "❌ Responda ou envie uma imagem com .s"
+            text: "❌ Envie ou responda uma imagem com .s"
           });
           return;
         }
@@ -102,9 +108,9 @@ async function start() {
         });
 
       } catch (err) {
-        console.log("Erro figurinha:", err);
+        console.log(err);
         await sock.sendMessage(msg.key.remoteJid, {
-          text: "❌ Erro ao criar figurinha"
+          text: "❌ Erro ao fazer figurinha"
         });
       }
     }

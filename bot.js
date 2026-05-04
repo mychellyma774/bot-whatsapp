@@ -75,12 +75,14 @@ async function start() {
 
     const isAdmin = admins.includes(sender);
 
+    console.log("Mensagem:", text);
+
     // =================
     // COMANDOS
     // =================
 
     if (text === prefix + "oi") {
-      await sock.sendMessage(from, { text: "Salve 😎 - GEADA BOT" });
+      await sock.sendMessage(from, { text: "FALA AI 😎" });
     }
 
     if (text === prefix + "menu") {
@@ -123,7 +125,7 @@ ADMIN:
 
         const sticker = new Sticker(buffer, {
           pack: "GEADA BOT ❄️",
-          author: "Keyson",
+          author: "MICHELsw17",
           type: StickerTypes.FULL,
           quality: 70
         });
@@ -136,6 +138,9 @@ ADMIN:
 
       } catch (err) {
         console.log(err);
+        await sock.sendMessage(from, {
+          text: "❌ Erro ao fazer figurinha"
+        });
       }
     }
 
@@ -147,7 +152,13 @@ ADMIN:
       if (!isGroup || !isAdmin) return;
 
       const quoted = msg.message.extendedTextMessage?.contextInfo;
-      if (!quoted) return;
+
+      if (!quoted) {
+        await sock.sendMessage(from, {
+          text: "❌ Responda a mensagem da pessoa"
+        });
+        return;
+      }
 
       const user = quoted.participant;
 
@@ -166,7 +177,13 @@ ADMIN:
       if (!isGroup || !isAdmin) return;
 
       const number = text.replace(prefix + "add", "").trim();
-      if (!number) return;
+
+      if (!number) {
+        await sock.sendMessage(from, {
+          text: "❌ Use: .add 559999999999"
+        });
+        return;
+      }
 
       const user = number.replace(/\D/g, "") + "@s.whatsapp.net";
 
@@ -178,6 +195,7 @@ ADMIN:
         });
 
       } catch (err) {
+        console.log(err);
         await sock.sendMessage(from, {
           text: "❌ Não foi possível adicionar"
         });

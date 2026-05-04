@@ -1,20 +1,15 @@
 {
-  "name": "bot-baileys",
+  "name": "bot-whatsapp",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "main": "bot.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node bot.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
-    "@whiskeysockets/baileys": "^7.0.0-rc.9",
-    "file-type": "^22.0.1",
-    "jimp": "^1.6.1",
-    "qrcode-terminal": "^0.12.0",
-    "sharp": "^0.34.5"
+    "@whiskeysockets/baileys": "^6.0.0",
+    "qrcode": "^1.5.0",
+    "sharp": "^0.33.0"
+  }
+}
   }
 }
